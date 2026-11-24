@@ -2,6 +2,7 @@
 import './style.css';
 import { api, imageUrl } from './api.js';
 import { el, plural, timeAgo, sceneRuntime } from './dom.js';
+import { renderScript, printScript, lengthLabel, hasContent } from './script.js';
 
 const root = document.getElementById('share');
 const token = decodeURIComponent(location.pathname.split('/').filter(Boolean)[1] || '');
@@ -248,6 +249,53 @@ function render() {
   );
 
   const runtime = sceneRuntime(scene);
+  const anyScript = scenes.some((s) => hasContent(s.script));
+  const mode = anyScript && localStorage.getItem(`share:${token}:mode`) === 'script' ? 'script' : 'beats';
+  const subtabs = anyScript
+    ? el(
+        'div',
+        { class: 'subtabs', role: 'tablist' },
+        [
+          ['beats', 'Beats & shots', String(scene.beats.length)],
+          ['script', 'Script', lengthLabel(scene.script || [])],
+        ].map(([m, label, meta]) =>
+          el(
+            'button',
+            {
+              class: 'subtab' + (mode === m ? ' active' : ''),
+              role: 'tab',
+              'aria-selected': String(mode === m),
+              onclick: () => {
+                localStorage.setItem(`share:${token}:mode`, m);
+                render();
+              },
+            },
+            label,
+            meta ? el('span', { class: 'subtab-meta' }, meta) : null
+          )
+        )
+      )
+    : null;
+
+  const scriptView = () =>
+    hasContent(scene.script)
+      ? el(
+          'div',
+          { class: 'script-editor' },
+          el(
+            'div',
+            { class: 'sp-toolbar' },
+            el('div', { class: 'spacer' }),
+            el(
+              'button',
+              { class: 'btn small-btn', onclick: () => printScript(project.name, scenes.flatMap((s) => s.script || [])) },
+              'Print / PDF (all scenes)'
+            )
+          ),
+          el('div', { class: 'script-wrap' }, el('div', { class: 'script-sheet' }, renderScript(scene.script)))
+        )
+      : el('p', { class: 'muted client-empty' }, 'No script for this scene yet.');
+
   const panel = el(
     'div',
     { class: 'scene-panel client-panel' },
@@ -258,7 +306,12 @@ function render() {
       el('span', { class: 'muted' }, plural(scene.beats.length, 'beat')),
       runtime ? el('span', { class: 'muted runtime' }, `Runtime ${runtime}`) : null
     ),
-    scene.beats.length ? scene.beats.map(beatCard) : el('p', { class: 'muted' }, 'No beats in this scene yet.'),
+    subtabs,
+    mode === 'script'
+      ? scriptView()
+      : scene.beats.length
+        ? scene.beats.map(beatCard)
+        : el('p', { class: 'muted' }, 'No beats in this scene yet.'),
     el('div', { class: 'scene-comments' }, thread('scene', scene.id, 'this scene'))
   );
 

@@ -48,13 +48,24 @@ To use a different password locally, copy `.env.example` to `.env.local` and set
   Times like `45`, `1:30` or `1:02:30` add up to the scene runtime.
 - Open a beat's **Shot list** to add shots. Click a canvas to sketch
   (`P` pen, `E` eraser, `Ctrl/Cmd+Z` undo, `Ctrl/Cmd+S` save, `Esc` close). Shots are numbered after their beat (3.1, 3.2…).
+- Each scene also has a **Script** tab — a screenplay editor laid out like Final Draft
+  (Courier 12pt, standard margins, page count and estimated screen time).
+  - **Enter** starts the next element (Heading → Action, Character → Dialogue, Dialogue → Character);
+    Enter on an empty element turns it into Action.
+  - **Tab / Shift+Tab** switch element (Action ⇄ Character ⇄ Transition, Dialogue ⇄ Parenthetical);
+    **Alt/⌥ + 1–7** jumps straight to one. Typing `int. ` in Action or `(` in Dialogue converts automatically.
+  - **SmartType** suggests character names, INT./EXT., locations, times of day and transitions;
+    (CONT'D) is added automatically.
+  - **Import .fdx** brings in a Final Draft script (optionally one scene tab per scene heading);
+    **Export .fdx** saves the whole project's script for Final Draft; **Print / PDF** prints it in screenplay format.
+  - Paste plain text or Fountain and it's formatted for you.
 - Everything saves automatically as you type ("Saved" appears bottom-right).
 
 ### Sharing with clients
 
 - **Share** → give the link a name and a password, optionally an expiry → **Create link**.
   Send the client the link and password.
-- Clients see a read-only view of the project (scenes, beats, shot sketches, notes) and can comment on any scene,
+- Clients see a read-only view of the project (scenes, beats, shot sketches, notes, script) and can comment on any scene,
   beat or shot. They can't edit anything or see your other projects.
 - **Comments** (top bar) shows everything clients have said. Reply, resolve or delete there.
   💬 chips on scenes, beats and shots jump to their comments.
@@ -67,7 +78,7 @@ Data lives in your Neon database. **Export backup** downloads everything (includ
 
 ## How it's built
 
-- `src/` — the app (`main.js`) and the client page (`share.js`), plain JS + Vite.
+- `src/` — the app (`main.js`), the client page (`share.js`) and the screenplay editor (`script.js`), plain JS + Vite.
 - `api/index.js` — one Vercel Function; all logic is in `server/handler.js`.
 - `server/auth.js` — owner login, share-link passwords (scrypt), signed HttpOnly cookies.
 - `server/db.js` — Neon on Vercel, embedded PGlite locally.

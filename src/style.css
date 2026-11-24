@@ -620,3 +620,136 @@ body.share-page { background: var(--bg); }
 }
 .main-head > .muted { white-space: nowrap; }
 .client-shot .comment { background: var(--panel); }
+
+/* ---------- Scene sub-tabs: Beat sheet | Script ---------- */
+.subtabs { display: flex; gap: 4px; margin: -2px 0 14px; border-bottom: 1px solid var(--line); }
+.subtab {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  border: 0;
+  border-bottom: 2px solid transparent;
+  margin-bottom: -1px;
+  padding: 6px 12px 8px;
+  background: none;
+  cursor: pointer;
+  font-size: 14px;
+  color: var(--muted);
+}
+.subtab:hover { color: var(--text); }
+.subtab.active { color: var(--text); font-weight: 600; border-bottom-color: var(--accent); }
+.subtab-meta { font-size: 12px; font-weight: 400; color: var(--muted); font-variant-numeric: tabular-nums; }
+.btn.small-btn { padding: 5px 10px; font-size: 13px; }
+
+/* ---------- Screenplay (Final Draft layout: US Letter, Courier 12pt, 1.5" left / 1" right margins) ---------- */
+/* 1em = 12pt = 1/6 inch, so 6em = 1 inch */
+.script-editor { display: grid; gap: 10px; }
+.sp-toolbar { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.sp-type { width: auto; padding: 5px 8px; font-size: 13px; }
+.sp-help { position: relative; font-size: 13px; }
+.sp-help summary { cursor: pointer; color: var(--muted); padding: 5px 4px; list-style: none; }
+.sp-help summary::-webkit-details-marker { display: none; }
+.sp-help[open] summary { color: var(--text); }
+.sp-help-body {
+  position: absolute;
+  right: 0;
+  top: 30px;
+  z-index: 5;
+  width: 340px;
+  padding: 4px 14px;
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
+}
+.sp-help-body p { margin: 10px 0; line-height: 1.4; }
+
+.script-wrap { overflow-x: auto; padding: 18px 12px 28px; background: #e7e5e0; border-radius: 6px; }
+.script-sheet { position: relative; width: max-content; margin: 0 auto; }
+.script-page {
+  box-sizing: border-box;
+  width: 51em;               /* 8.5in */
+  min-height: 66em;          /* 11in */
+  padding: 6em 6em 6em 9em;  /* 1in top/right/bottom, 1.5in left */
+  background: #fff;
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.12);
+  font-family: 'Courier Prime', 'Courier New', Courier, monospace;
+  font-size: 12pt;
+  line-height: 1em;
+  color: #111;
+  cursor: text;
+}
+.sp-el {
+  position: relative;
+  min-height: 1em;
+  white-space: pre-wrap;
+  overflow-wrap: break-word;
+  outline: none;
+  caret-color: var(--accent);
+}
+.sp-heading { margin-top: 2em; text-transform: uppercase; font-weight: 700; }
+.sp-action, .sp-character, .sp-transition, .sp-shot { margin-top: 1em; }
+.sp-el:first-child { margin-top: 0; }
+.sp-character { margin-left: 13.2em; text-transform: uppercase; }           /* 3.7in from page edge */
+.sp-character[data-contd]::after { content: " (CONT'D)"; }
+.sp-parenthetical { margin-left: 9.6em; max-width: 13.8em; }                 /* 3.1in */
+.sp-dialogue { margin-left: 6em; max-width: 21em; }                          /* 2.5in, 3.5in wide */
+.sp-transition { text-align: right; text-transform: uppercase; }
+.sp-shot { text-transform: uppercase; }
+.sp-el.is-empty:focus::before {
+  content: attr(data-ph);
+  position: absolute;
+  color: #b8b8b8;
+  pointer-events: none;
+  white-space: nowrap;
+}
+.sp-transition.is-empty:focus::before { right: 0; }
+.script-page:not(.readonly) .sp-el:focus { background: #fff8f3; box-shadow: -1.2em 0 0 #fff8f3, 1.2em 0 0 #fff8f3; }
+
+.sp-suggest {
+  position: absolute;
+  z-index: 6;
+  min-width: 16em;
+  padding: 4px;
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.14);
+  font-family: 'Courier Prime', 'Courier New', monospace;
+  font-size: 12pt;
+}
+.sp-opt { padding: 4px 8px; border-radius: 4px; cursor: pointer; white-space: nowrap; }
+.sp-opt.on, .sp-opt:hover { background: var(--accent); color: #fff; }
+
+/* Phones: keep the screenplay proportions, drop the paper margins */
+@media (max-width: 700px) {
+  .script-wrap { padding: 8px; }
+  .script-sheet { width: auto; }
+  .script-page { width: auto; min-height: 0; padding: 2em 1.2em; }
+  .sp-character { margin-left: 40%; }
+  .sp-dialogue { margin-left: 12%; }
+  .sp-parenthetical { margin-left: 25%; }
+}
+
+/* ---------- Printing a script ---------- */
+.print-root { display: none; }
+@media print {
+  @page { size: letter; margin: 1in 1in 1in 1.5in; @top-right { content: counter(page) "."; font-family: 'Courier Prime', 'Courier New', monospace; font-size: 12pt; } }
+  @page :first { @top-right { content: none; } }
+  body.printing > :not(.print-root) { display: none !important; }
+  body.printing { background: #fff; }
+  body.printing .print-root { display: block; }
+  .print-title {
+    break-after: page;
+    height: 8in;
+    display: grid;
+    place-content: center;
+    text-align: center;
+    font-family: 'Courier Prime', 'Courier New', monospace;
+    font-size: 12pt;
+  }
+  .print-title h1 { font-size: 12pt; text-transform: uppercase; text-decoration: underline; margin: 0 0 2em; }
+  .print-root .script-page { width: auto; min-height: 0; padding: 0; box-shadow: none; }
+  .print-root .sp-heading, .print-root .sp-character, .print-root .sp-parenthetical { break-after: avoid; }
+  .print-root .sp-dialogue, .print-root .sp-parenthetical { break-before: avoid; }
+}

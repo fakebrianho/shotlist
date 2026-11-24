@@ -3,6 +3,7 @@ import * as db from './db.js';
 import { imageUrl, onSaveStatus } from './api.js';
 import { $, el, plural, timeAgo, sceneRuntime } from './dom.js';
 import { openSketch } from './sketch.js';
+import { scriptEditor, toFDX, parseFDX, splitByHeading, printScript, lengthLabel, hasContent } from './script.js';
 
 const projectList = $('#project-list');
 const main = $('#main');
@@ -625,13 +626,128 @@ function beatSheet(scene, scenes, shotsByBeat) {
     rows
   );
 
+  const mode = localStorage.getItem('sceneMode') === 'script' ? 'script' : 'beats';
+  const scriptLen = lengthLabel(scene.script || []);
+  const subtabs = el(
+    'div',
+    { class: 'subtabs', role: 'tablist' },
+    [
+      ['beats', 'Beat sheet', `${scene.beats.length}`],
+      ['script', 'Script', scriptLen],
+    ].map(([m, label, meta]) =>
+      el(
+        'button',
+        {
+          class: 'subtab' + (mode === m ? ' active' : ''),
+          role: 'tab',
+          'aria-selected': String(mode === m),
+          onclick: () => {
+            localStorage.setItem('sceneMode', m);
+            renderMain();
+          },
+        },
+        label,
+        meta ? el('span', { class: 'subtab-meta' }, meta) : null
+      )
+    )
+  );
+
   return el(
     'div',
     { class: 'scene-panel' },
     toolbar,
-    el('div', { class: 'beat-scroll' }, table),
-    el('button', { class: 'add-beat', onclick: addBeat }, '+ Add beat')
+    subtabs,
+    mode === 'script'
+      ? scriptPane(scene, scenes)
+      : [el('div', { class: 'beat-scroll' }, table), el('button', { class: 'add-beat', onclick: addBeat }, '+ Add beat')]
   );
+}
+
+/* ---------- Script (per scene, Final Draft-style) ---------- */
+
+function download(name, text, type) {
+  const a = el('a', { href: URL.createObjectURL(new Blob([text], { type })), download: name });
+  a.click();
+  setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+}
+
+const safeName = (s) => (s || 'script').replace(/[\\/:*?"<>|]+/g, '').trim() || 'script';
+const projectScript = (scenes) => scenes.flatMap((s) => s.script || []);
+
+function scriptPane(scene, scenes) {
+  const save = debounce(() => db.putScene(scene));
+
+  const fileInput = el('input', {
+    type: 'file',
+    accept: '.fdx,application/xml,text/xml',
+    hidden: '',
+    onchange: async (e) => {
+      const file = e.target.files[0];
+      e.target.value = '';
+      if (!file) return;
+      let blocks;
+      try {
+        blocks = parseFDX(await file.text());
+      } catch (err) {
+        return alert(err.message);
+      }
+      if (!blocks.length) return alert('That file has no script text.');
+      const chunks = splitByHeading(blocks);
+      if (chunks.length > 1 && confirm(`This script has ${chunks.length} scene headings.\n\nOK: make a new scene tab for each one.\nCancel: put it all in “${scene.name}”.`)) {
+        let order = Math.max(...scenes.map((s) => s.order)) + 1;
+        let first = null;
+        for (const chunk of chunks) {
+          const name = chunk[0].type === 'heading' ? chunk[0].text.toUpperCase() : 'Opening';
+          const s = { id: db.uid(), projectId: scene.projectId, order: order++, name: name.slice(0, 80), beats: [newBeat(1)], script: chunk, createdAt: Date.now() };
+          await db.putScene(s);
+          first ??= s;
+        }
+        localStorage.setItem(sceneKey(scene.projectId), first.id);
+        return renderMain();
+      }
+      editor.addBlocks(blocks);
+    },
+  });
+
+  const actions = [
+    el('button', { class: 'btn small-btn', title: 'Import a Final Draft file into this scene', onclick: () => fileInput.click() }, 'Import .fdx'),
+    fileInput,
+    el(
+      'button',
+      {
+        class: 'btn small-btn',
+        title: 'Download the whole project’s script for Final Draft',
+        onclick: async () => {
+          await flushPending();
+          download(`${safeName(current.project.name)}.fdx`, toFDX(projectScript(scenes)), 'application/xml');
+        },
+      },
+      'Export .fdx'
+    ),
+    el(
+      'button',
+      {
+        class: 'btn small-btn',
+        title: 'Print or save as PDF — all scenes, in order',
+        onclick: () => {
+          if (!hasContent(projectScript(scenes))) return alert('There’s no script to print yet.');
+          printScript(current.project.name, projectScript(scenes));
+        },
+      },
+      'Print / PDF'
+    ),
+  ];
+
+  const editor = scriptEditor({
+    blocks: scene.script,
+    getOtherBlocks: () => scenes.filter((s) => s !== scene).flatMap((s) => s.script || []),
+    onChange: (blocks) => {
+      scene.script = blocks;
+      save();
+    },
+    actions,
+  });
+  return editor;
 }
 
 /* ---------- Comments drawer ---------- */
